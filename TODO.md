@@ -1,0 +1,1 @@
+- inserire come variabile env l'utente GUID e UUID

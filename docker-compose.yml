@@ -1,0 +1,217 @@
+services:
+
+  # RADARR
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    network_mode: "service:vpn"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - ${TIMEZONE}
+    volumes:
+      - ./radarr/config:/config
+      - ${MEDIA_PATH}/data:/data
+    depends_on:
+      vpn:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # SONARR
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    network_mode: "service:vpn"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - ${TIMEZONE}
+    volumes:
+      - ./sonarr/config:/config
+      - ${MEDIA_PATH}/data:/data
+    depends_on:
+      vpn:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # PROWLARR
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    network_mode: "service:vpn"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./prowlarr/config:/config
+    depends_on:
+      vpn:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # BAZARR
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    network_mode: "service:vpn"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - ${TIMEZONE}
+    volumes:
+      - ./bazarr/config:/config
+      - ${MEDIA_PATH}/data:/data
+    depends_on:
+      vpn:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # LIDARR
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    network_mode: "service:vpn"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./lidarr/config:/config
+      - ${MEDIA_PATH}/data:/data
+    depends_on:
+      vpn:
+        condition: service_healthy
+    restart: unless-stopped
+  
+
+  # JELLYFIN
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - JELLYFIN_PublishedServerUrl=http://192.168.1.62:8096/    
+      - TZ=${TIMEZONE}
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./jellyfin/config:/config
+      - ./jellyfin/cache:/cache
+      - ${MEDIA_PATH}/data/media:/media:ro
+    network_mode: host
+    runtime: nvidia
+    restart: unless-stopped
+
+  # VPN PIA
+  vpn:
+    image: thrnz/docker-wireguard-pia
+    container_name: vpn-pia
+    # Alternatively you may use ghcr.io
+    #image: ghcr.io/thrnz/docker-wireguard-pia
+    volumes:
+      # Auth token is stored here
+      - ./pia/pia:/pia
+      # If enabled, the forwarded port is dumped to /pia-shared/port.dat for potential use in other containers
+      - ./pia/pia-shared:/pia-shared
+    ports:
+      - 7878:7878 # Radarr
+      - 8989:8989 # Sonarr
+      - 9696:9696 # Prowlarr
+      - 6767:6767 # Bazarr
+      - 8686:8686 # Lidarr
+      - 8080:8080 # WebUI di QBittorrent
+    cap_add:
+      - ALL
+    environment:
+      - LOC=${VPN_ZONE}
+      - USER=${VPN_USER}
+      - PASS=${VPN_PASS}
+      - LOCAL_NETWORK=${LOCAL_SUBNET}
+      - RECONNECT=1
+      - PORT_FORWARDING=1
+      - PORT_PERSIST=1
+      - FIREWALL=0
+    sysctls:
+      # The wg-quick script tries to set this when setting up routing, however this requires running the container
+      # with the --privileged flag set. Setting it here instead if needed means the container can be run with lower
+      # privileges. This only needs setting if strict reverse path filtering (rp_filter=1) is used.
+      - net.ipv4.conf.all.src_valid_mark=1
+      # May as well disable ipv6. Should be blocked anyway.
+      - net.ipv6.conf.default.disable_ipv6=1
+      - net.ipv6.conf.all.disable_ipv6=1
+      - net.ipv6.conf.lo.disable_ipv6=1
+    
+    restart: unless-stopped
+
+  # Example of another service sharing the VPN
+  # If this service needs LAN access then LOCAL_NETWORK must be set appropriately on the vpn container
+  # Forwarded ports should also be set on the vpn container if needed rather than this one in
+  # order to access from the LAN
+  # It may be preferable to use a reverse proxy connected via the docker bridge network instead
+  # to keep the vpn isolated from the LAN
+  #other-service:
+    #image: some-other-image
+    # Other services can share the VPN using 'network_mode: "service:[service name]"'
+    # See https://docs.docker.com/engine/network/#container-networks and
+    # https://docs.docker.com/reference/compose-file/services/#network_mode
+    #network_mode: "service:vpn"
+    # The following can be used to ensure the vpn is up and functional before the dependant service is started
+    #depends_on:
+      #vpn:
+        #condition: service_healthy
+  # See https://gist.github.com/thrnz/dcbaa0af66c70af8e302a1c7eb75484a used for automatically set listen port of pia
+
+
+  # QBITORRENT
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "service:vpn"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - ${TIMEZONE}
+      - WEBUI_PORT=8080
+    volumes:
+      - ./qbittorrent/config:/config
+      - ${MEDIA_PATH}/data/torrents:/data/torrents
+    depends_on:
+      vpn:
+        condition: service_healthy
+    restart: unless-stopped
+
+  
+  # HELPER QBITTORRENT PORT
+  qbt-port-helper:
+    build: ./qbt-port-helper
+    container_name: qbt-port-helper
+    environment:
+      - USER=${QBT_USER:-admin}
+      - PASSWORD=${QBT_PSW:-adminadmin}
+    volumes: 
+      - ./pia/pia-shared:/pia-shared:ro
+    network_mode: "service:vpn"
+    depends_on:
+      vpn:
+        condition: service_healthy
+    restart: unless-stopped
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    network_mode: "service:vpn"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FILE=${LOG_FILE:-none}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=${TIMEZONE}
+    depends_on:
+      vpn:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pia:
+  pia-shared:
