@@ -6,8 +6,8 @@ services:
     container_name: radarr
     network_mode: "service:vpn"
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${PUID}
+      - PGID=${PGID}
       - ${TIMEZONE}
     volumes:
       - ./radarr/config:/config
@@ -23,8 +23,8 @@ services:
     container_name: sonarr
     network_mode: "service:vpn"
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${PUID}
+      - PGID=${PGID}
       - ${TIMEZONE}
     volumes:
       - ./sonarr/config:/config
@@ -40,8 +40,8 @@ services:
     container_name: prowlarr
     network_mode: "service:vpn"
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${PUID}
+      - PGID=${PGID}
       - TZ=Etc/UTC
     volumes:
       - ./prowlarr/config:/config
@@ -56,8 +56,8 @@ services:
     container_name: bazarr
     network_mode: "service:vpn"
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${PUID}
+      - PGID=${PGID}
       - ${TIMEZONE}
     volumes:
       - ./bazarr/config:/config
@@ -73,8 +73,8 @@ services:
     container_name: lidarr
     network_mode: "service:vpn"
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${PUID}
+      - PGID=${PGID}
       - TZ=Etc/UTC
     volumes:
       - ./lidarr/config:/config
@@ -90,9 +90,9 @@ services:
     image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
     environment:
-      - PUID=1000
-      - PGID=1000
-      - JELLYFIN_PublishedServerUrl=http://192.168.1.62:8096/    
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - JELLYFIN_PublishedServerUrl=http://${HOST_IP}:8096/ 
       - TZ=${TIMEZONE}
       - NVIDIA_VISIBLE_DEVICES=all
     volumes:
@@ -169,8 +169,8 @@ services:
     container_name: qbittorrent
     network_mode: "service:vpn"
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${PUID}
+      - PGID=${PGID}
       - ${TIMEZONE}
       - WEBUI_PORT=8080
     volumes:
