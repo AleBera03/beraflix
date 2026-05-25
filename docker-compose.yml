@@ -11,7 +11,8 @@ services:
       - ${TIMEZONE}
     volumes:
       - ./radarr/config:/config
-      - ${MEDIA_PATH}/data:/data
+      - ${MEDIA_PATH}/arr/data:/data
+      - ${MEDIA_PATH}/downloads:/data/downloads
     depends_on:
       vpn:
         condition: service_healthy
@@ -28,7 +29,8 @@ services:
       - ${TIMEZONE}
     volumes:
       - ./sonarr/config:/config
-      - ${MEDIA_PATH}/data:/data
+      - ${MEDIA_PATH}/arr/data:/data
+      - ${MEDIA_PATH}/downloads:/data/downloads
     depends_on:
       vpn:
         condition: service_healthy
@@ -61,7 +63,8 @@ services:
       - ${TIMEZONE}
     volumes:
       - ./bazarr/config:/config
-      - ${MEDIA_PATH}/data:/data
+      - ${MEDIA_PATH}/arr/data:/data
+      - ${MEDIA_PATH}/downloads:/data/downloads
     depends_on:
       vpn:
         condition: service_healthy
@@ -78,7 +81,8 @@ services:
       - TZ=Etc/UTC
     volumes:
       - ./lidarr/config:/config
-      - ${MEDIA_PATH}/data:/data
+      - ${MEDIA_PATH}/arr/data:/data
+      - ${MEDIA_PATH}/downloads:/data/downloads
     depends_on:
       vpn:
         condition: service_healthy
@@ -98,7 +102,7 @@ services:
     volumes:
       - ./jellyfin/config:/config
       - ./jellyfin/cache:/cache
-      - ${MEDIA_PATH}/data/media:/media:ro
+      - ${MEDIA_PATH}/arr/data/media:/media:ro
     network_mode: host
     runtime: nvidia
     restart: unless-stopped
@@ -175,7 +179,7 @@ services:
       - WEBUI_PORT=8080
     volumes:
       - ./qbittorrent/config:/config
-      - ${MEDIA_PATH}/data/torrents:/data/torrents
+      - ${MEDIA_PATH}/arr/data/torrents:/data/torrents
     depends_on:
       vpn:
         condition: service_healthy
