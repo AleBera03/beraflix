@@ -9,10 +9,10 @@ services:
       - PUID=${PUID}
       - PGID=${PGID}
       - ${TIMEZONE}
+      - RADARR__AUTH__APIKEY=${RADARR_API_KEY}
     volumes:
       - ./radarr/config:/config
       - ${MEDIA_PATH}/arr/data:/data
-      - ${MEDIA_PATH}/downloads:/data/downloads
     depends_on:
       vpn:
         condition: service_healthy
@@ -27,10 +27,10 @@ services:
       - PUID=${PUID}
       - PGID=${PGID}
       - ${TIMEZONE}
+      - SONARR__AUTH__APIKEY=${SONARR_API_KEY}
     volumes:
       - ./sonarr/config:/config
       - ${MEDIA_PATH}/arr/data:/data
-      - ${MEDIA_PATH}/downloads:/data/downloads
     depends_on:
       vpn:
         condition: service_healthy
@@ -64,7 +64,6 @@ services:
     volumes:
       - ./bazarr/config:/config
       - ${MEDIA_PATH}/arr/data:/data
-      - ${MEDIA_PATH}/downloads:/data/downloads
     depends_on:
       vpn:
         condition: service_healthy
@@ -82,12 +81,34 @@ services:
     volumes:
       - ./lidarr/config:/config
       - ${MEDIA_PATH}/arr/data:/data
-      - ${MEDIA_PATH}/downloads:/data/downloads
     depends_on:
       vpn:
         condition: service_healthy
     restart: unless-stopped
   
+  unpackerr:
+    image: golift/unpackerr
+    container_name: unpackerr
+    user: "${PUID}:${PGID}"
+    network_mode: "service:vpn"
+    volumes:
+      - ${MEDIA_PATH}/arr/data:/data
+    environment:
+      - UN_SONARR_0_URL=http://localhost:8989
+      - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
+      - UN_SONARR_0_PATHS_0=/data/torrents
+      - UN_RADARR_0_URL=http://localhost:7878
+      - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
+      - UN_RADARR_0_PATHS_0=/data/torrents
+      - UN_FOLDER_0_PATH=/data/downloads/auto_extract
+    depends_on:
+      vpn:
+        condition: service_healthy
+      sonarr:
+        condition: service_started
+      radarr:
+        condition: service_started
+    restart: unless-stopped
 
   # JELLYFIN
   jellyfin:
@@ -137,9 +158,6 @@ services:
       - PORT_PERSIST=1
       - FIREWALL=0
     sysctls:
-      # The wg-quick script tries to set this when setting up routing, however this requires running the container
-      # with the --privileged flag set. Setting it here instead if needed means the container can be run with lower
-      # privileges. This only needs setting if strict reverse path filtering (rp_filter=1) is used.
       - net.ipv4.conf.all.src_valid_mark=1
       # May as well disable ipv6. Should be blocked anyway.
       - net.ipv6.conf.default.disable_ipv6=1
@@ -147,25 +165,6 @@ services:
       - net.ipv6.conf.lo.disable_ipv6=1
     
     restart: unless-stopped
-
-  # Example of another service sharing the VPN
-  # If this service needs LAN access then LOCAL_NETWORK must be set appropriately on the vpn container
-  # Forwarded ports should also be set on the vpn container if needed rather than this one in
-  # order to access from the LAN
-  # It may be preferable to use a reverse proxy connected via the docker bridge network instead
-  # to keep the vpn isolated from the LAN
-  #other-service:
-    #image: some-other-image
-    # Other services can share the VPN using 'network_mode: "service:[service name]"'
-    # See https://docs.docker.com/engine/network/#container-networks and
-    # https://docs.docker.com/reference/compose-file/services/#network_mode
-    #network_mode: "service:vpn"
-    # The following can be used to ensure the vpn is up and functional before the dependant service is started
-    #depends_on:
-      #vpn:
-        #condition: service_healthy
-  # See https://gist.github.com/thrnz/dcbaa0af66c70af8e302a1c7eb75484a used for automatically set listen port of pia
-
 
   # QBITORRENT
   qbittorrent:
